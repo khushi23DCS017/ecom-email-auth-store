@@ -21,20 +21,21 @@ const SignupForm = () => {
     setMessage("");
 
     try {
-      // In a real application, this would connect to your Django backend
-      // Since we don't have a working backend connection, we'll simulate success
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if email is valid format
-      if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        throw new Error('Please enter a valid email address');
+      // This would connect to your Django backend
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Registration failed');
       }
-      
-      // Simulate successful registration
-      console.log('Registration data:', { email, password: password ? '********' : 'none' });
-      
+
       setMessage("Please check your email for a verification link.");
       toast.success("Registration successful! Verification email sent.");
 

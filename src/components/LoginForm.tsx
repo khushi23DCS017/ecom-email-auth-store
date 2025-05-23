@@ -11,37 +11,45 @@ const LoginForm = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setMessage("");
+    setError("");
 
     try {
-      // In a real application, this would connect to your Django backend
-      // Since we don't have a working backend connection, we'll simulate success
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if email is valid format
-      if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        throw new Error('Please enter a valid email address');
+      // Connect to Django backend
+      const response = await fetch('http://localhost:8000/api/auth/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 403 && data.detail === "Email not verified") {
+          // Redirect to verification sent page
+          navigate('/verification-sent', { state: { email } });
+          toast.error("Your email is not verified. Please check your inbox.");
+          return;
+        }
+        throw new Error(data.detail || 'Login failed');
       }
-      
-      // Simulate successful login
-      console.log('Login attempt:', { email });
+
+      // Store token or user data
+      localStorage.setItem('authToken', data.token);
       
       toast.success("Login successful!");
-      
-      // After successful login, redirect to home page
-      navigate('/');
+      navigate('/'); // Redirect to home page
     } catch (error) {
       console.error('Login error:', error);
-      toast.error("Login failed. Please try again.");
-      setMessage((error as Error).message || "Invalid email or password");
+      setError((error as Error).message);
+      toast.error("Login failed. Please check your credentials.");
     } finally {
       setIsLoading(false);
     }
@@ -50,9 +58,9 @@ const LoginForm = () => {
   return (
     <div className="max-w-md w-full mx-auto space-y-6 p-6 bg-white rounded-lg shadow-md">
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Log in to your account</h1>
+        <h1 className="text-2xl font-bold">Welcome back</h1>
         <p className="text-sm text-gray-500 mt-2">
-          Enter your email to continue
+          Sign in to your account
         </p>
       </div>
 
@@ -80,26 +88,23 @@ const LoginForm = () => {
           />
         </div>
 
-        {message && (
-          <Alert>
-            <AlertDescription>{message}</AlertDescription>
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={isLoading || !email}
+          disabled={isLoading}
         >
-          {isLoading ? "Logging in..." : "Log In"}
+          {isLoading ? "Signing in..." : "Sign in"}
         </Button>
       </form>
 
       <div className="text-center text-sm">
         <p>Don't have an account? <a href="/signup" className="text-primary hover:underline">Sign up</a></p>
-        <p className="mt-2">
-          <a href="/forgot-password" className="text-primary hover:underline">Forgot your password?</a>
-        </p>
       </div>
     </div>
   );
