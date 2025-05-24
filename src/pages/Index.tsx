@@ -1,24 +1,30 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatINR, convertUSDToINR } from '@/utils/currency';
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Search, User, Heart } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 
 const Index = () => {
-  // Check if user is logged in
-  const isLoggedIn = localStorage.getItem('authToken') !== null;
+  const { user, logout } = useAuth();
+  const { addToCart, getTotalItems } = useCart();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
+    logout();
+    toast.success("Logged out successfully");
     window.location.reload();
   };
 
-  // Featured products (mock data)
+  // Featured products with INR pricing
   const featuredProducts = [
-    { id: 1, name: "Wireless Headphones", price: 99.99, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e" },
-    { id: 2, name: "Smart Watch", price: 199.99, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30" },
-    { id: 3, name: "Laptop Sleeve", price: 29.99, image: "https://images.unsplash.com/photo-1546868871-7041f2a55e12" },
-    { id: 4, name: "Portable Speaker", price: 49.99, image: "https://images.unsplash.com/photo-1558537348-c0f8e733989d" },
+    { id: 1, name: "Wireless Headphones", price: convertUSDToINR(99.99), image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e" },
+    { id: 2, name: "Smart Watch", price: convertUSDToINR(199.99), image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30" },
+    { id: 3, name: "Laptop Sleeve", price: convertUSDToINR(29.99), image: "https://images.unsplash.com/photo-1546868871-7041f2a55e12" },
+    { id: 4, name: "Portable Speaker", price: convertUSDToINR(49.99), image: "https://images.unsplash.com/photo-1558537348-c0f8e733989d" },
   ];
 
   // Categories (mock data)
@@ -29,6 +35,16 @@ const Index = () => {
     { id: 4, name: "Sports", image: "https://images.unsplash.com/photo-1517649763962-0c623066013b" },
   ];
 
+  const handleAddToCart = (product: typeof featuredProducts[0]) => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image
+    });
+    toast.success(`${product.name} added to cart!`);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Header/Navigation */}
@@ -36,15 +52,21 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">ShopEasy</h1>
+              <Link to="/">
+                <h1 className="text-2xl font-bold text-gray-900">ShopEasy</h1>
+              </Link>
               <div className="md:hidden flex items-center gap-3">
                 <button className="p-2">
                   <Search className="h-5 w-5" />
                 </button>
-                <button className="p-2 relative">
+                <Link to="/cart" className="p-2 relative">
                   <ShoppingCart className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">0</span>
-                </button>
+                  {getTotalItems() > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {getTotalItems()}
+                    </span>
+                  )}
+                </Link>
               </div>
             </div>
             
@@ -66,14 +88,19 @@ const Index = () => {
                 <Heart className="h-5 w-5" />
                 <span className="text-sm">Wishlist</span>
               </button>
-              <button className="flex items-center gap-1 hover:text-primary relative">
+              <Link to="/cart" className="flex items-center gap-1 hover:text-primary relative">
                 <ShoppingCart className="h-5 w-5" />
                 <span className="text-sm">Cart</span>
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">0</span>
-              </button>
+                {getTotalItems() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {getTotalItems()}
+                  </span>
+                )}
+              </Link>
 
-              {isLoggedIn ? (
+              {user ? (
                 <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">Welcome, {user.name}</span>
                   <Link to="/profile" className="flex items-center gap-1 hover:text-primary">
                     <User className="h-5 w-5" />
                     <span className="text-sm">Account</span>
@@ -106,6 +133,13 @@ const Index = () => {
               </button>
             </div>
           </div>
+
+          {/* Mobile user info */}
+          {user && (
+            <div className="md:hidden mt-4 text-center">
+              <span className="text-sm text-gray-600">Welcome, {user.name}</span>
+            </div>
+          )}
 
           {/* Category navigation */}
           <nav className="hidden md:flex items-center space-x-8 mt-4">
@@ -174,8 +208,13 @@ const Index = () => {
                   <div className="p-4">
                     <h3 className="font-medium">{product.name}</h3>
                     <div className="flex items-center justify-between mt-2">
-                      <p className="font-bold">${product.price.toFixed(2)}</p>
-                      <Button size="sm" variant="outline" className="flex items-center gap-1">
+                      <p className="font-bold">{formatINR(product.price)}</p>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex items-center gap-1"
+                        onClick={() => handleAddToCart(product)}
+                      >
                         <ShoppingCart className="h-4 w-4" />
                         <span>Add</span>
                       </Button>

@@ -1,18 +1,20 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail } from "lucide-react";
 
 const SignupForm = () => {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,30 +23,16 @@ const SignupForm = () => {
     setMessage("");
 
     try {
-      // This would connect to your Django backend
-      const response = await fetch('http://localhost:8000/api/auth/register/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Registration failed');
+      // Simulate registration success and automatic login
+      const success = await login(email, password, name);
+      if (success) {
+        toast.success("Registration successful! Welcome to ShopEasy!");
+        navigate('/profile'); // Redirect to profile/dashboard
       }
-
-      setMessage("Please check your email for a verification link.");
-      toast.success("Registration successful! Verification email sent.");
-
-      // After successful registration, redirect to a confirmation page
-      navigate('/verification-sent', { state: { email } });
     } catch (error) {
       console.error('Registration error:', error);
       toast.error("Registration failed. Please try again.");
-      setMessage((error as Error).message);
+      setMessage("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -55,11 +43,23 @@ const SignupForm = () => {
       <div className="text-center">
         <h1 className="text-2xl font-bold">Create your account</h1>
         <p className="text-sm text-gray-500 mt-2">
-          Enter your email to get started
+          Join ShopEasy today
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Full Name</Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="Enter your full name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -73,17 +73,15 @@ const SignupForm = () => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password (optional)</Label>
+          <Label htmlFor="password">Password</Label>
           <Input
             id="password"
             type="password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
-          <p className="text-xs text-gray-500">
-            Password is optional. If not provided, you'll need to verify your email to login.
-          </p>
         </div>
 
         {message && (
@@ -95,7 +93,7 @@ const SignupForm = () => {
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={isLoading || !email}
+          disabled={isLoading || !email || !name}
         >
           {isLoading ? "Creating account..." : "Create Account"}
         </Button>

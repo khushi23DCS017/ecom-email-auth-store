@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ const LoginForm = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,35 +22,14 @@ const LoginForm = () => {
     setError("");
 
     try {
-      // Connect to Django backend
-      const response = await fetch('http://localhost:8000/api/auth/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 403 && data.detail === "Email not verified") {
-          // Redirect to verification sent page
-          navigate('/verification-sent', { state: { email } });
-          toast.error("Your email is not verified. Please check your inbox.");
-          return;
-        }
-        throw new Error(data.detail || 'Login failed');
+      const success = await login(email, password);
+      if (success) {
+        toast.success("Login successful!");
+        navigate('/profile'); // Redirect to profile/dashboard
       }
-
-      // Store token or user data
-      localStorage.setItem('authToken', data.token);
-      
-      toast.success("Login successful!");
-      navigate('/'); // Redirect to home page
     } catch (error) {
       console.error('Login error:', error);
-      setError((error as Error).message);
+      setError("Login failed. Please check your credentials.");
       toast.error("Login failed. Please check your credentials.");
     } finally {
       setIsLoading(false);
@@ -85,6 +66,7 @@ const LoginForm = () => {
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
         </div>
 
